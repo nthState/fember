@@ -108,9 +108,7 @@ class ViewModel : ObservableObject {
   
   /// Did the user get it correct?
   @Published var result: Bool? = nil
-  
-  var publisher = PassthroughSubject<Bool, Never>()
-  
+
   var numberSink: AnyCancellable?
   
   /**
