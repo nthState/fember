@@ -26,14 +26,11 @@ struct ContentView: View {
   /// ViewModel contains target number
   @ObservedObject var memory: ViewModel = ViewModel()
   
-  /// result updates the UI
-  @State var result: Bool? = nil
-  
   var body: some View {
     VStack() {
       
-      ResultView(result: $result, name: "Correct", assert: true)
-      ResultView(result: $result, name: "Incorrect", assert: false)
+      ResultView(result: $memory.result, name: "Correct", assert: true)
+      ResultView(result: $memory.result, name: "Incorrect", assert: false)
       
       Text("Number of digits 2-10")
       Slider(value: $memory.digitLength, in: 2...10)
@@ -43,19 +40,8 @@ struct ContentView: View {
       GuessNumber(numberToRemember: $memory.numberToRemember, opacity: $memory.numberOpacity)
       
       TextField("Enter:", text: $memory.rememberedNumber)
-        .onReceive(memory.publisher, perform: { (output) in
-          
-          self.result = output
-
-          // Dispatch after, otherwise the textfield isn't cleared
-          DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) {
-            self.result = nil
-            self.memory.generateNew()
-          }
-          
-        })
         .border(Color.black)
-        .keyboardType(/*@START_MENU_TOKEN@*/.numberPad/*@END_MENU_TOKEN@*/)
+        .keyboardType(.numberPad)
       Spacer()
     }.onAppear {
       self.memory.generateNew()
@@ -120,6 +106,9 @@ class ViewModel : ObservableObject {
   /// What number to rememember
   @Published var numberToRemember: String = "a"
   
+  /// Did the user get it correct?
+  @Published var result: Bool? = nil
+  
   var publisher = PassthroughSubject<Bool, Never>()
   
   var numberSink: AnyCancellable?
@@ -136,13 +125,24 @@ class ViewModel : ObservableObject {
       os_log("current: %@", log: OSLog.actions, type: .info, currentText)
       
       if !strongSelf.numberToRemember.hasPrefix(currentText) {
-        return strongSelf.publisher.send(false)
+        strongSelf.result = false
+        strongSelf.refresh()
       }
       
       if strongSelf.numberToRemember == currentText {
-        strongSelf.publisher.send(true)
+        strongSelf.result = true
+        strongSelf.refresh()
       }
       
+    }
+  }
+  
+  /**
+   Generate a new number after x seconds, so that the textfield will clear
+  */
+  func refresh() {
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) {
+      self.generateNew()
     }
   }
   
